@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>ppstream</title>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.4.1/css/bulma.min.css">
+		<style>
+			.username {
+				font-size: 1.7rem;
+			}
+			.image img {
+				width: 100px;
+			}
+		</style>
+	</head>
+	<body>
+		<section class="hero is-info">
+			<div class="hero-body">
+				<div class="container">
+					<h1 class="title">
+						ppstream
+					</h1>
+					<h2 class="subtitle">
+						a website to see the stream of scores submitted on Ripple.
+					</h2>
+				</div>
+			</div>
+		</section>
+		<section class="section">
+			<div class="container" style="padding-bottom: 20px" id="status-message-container">
+				<div class="notification is-primary" id="status-message">
+					We're still loading stuff...
+				</div>
+			</div>
+			<div class="container" id="score-container">
+			</div>
+		</section>
+		<div class="box is-hidden" id="template-box">
+			<article class="media">
+				<div class="media-left">
+					<a>
+						<figure class="image">
+							<img>
+						</figure>
+					</a>
+				</div>
+				<div class="media-content">
+					<div class="content">
+						<p>
+						</p>
+					</div>
+				</div>
+			</article>
+		</div>
+		<script>
+			// just a shortcut for document.getElementById
+			function gi(s) {
+				return document.getElementById(s);
+			}
+
+			// these are the various parts of the page that are going to be modified
+			var statusMessage = gi("status-message");
+			var statusMessageContainer = gi("status-message-container");
+			var scoreContainer = gi("score-container");
+			var templateBox = gi("template-box");
+
+			// status message functions
+			function setStatusMessage(s) {
+				statusMessageContainer.removeAttribute("hidden");
+				statusMessage.innerText = s;
+			}
+			function hideStatusMessage() {
+				statusMessageContainer.style = "display: none;";
+			}
+
+			// users contains a local storage of users, without needing to fetch
+			// from the API users all the time.
+			var users = {};
+			function getUser(i, cb) {
+				var u = users[i];
+				if (typeof u !== "undefined")
+					cb(u);
+				
+				var req = new XMLHttpRequest();
+				req.onreadystatechange = function() {
+					if (req.readyState !== XMLHttpRequest.DONE)
+						return;
+					if (req.status != 200) {
+						console.error(req.status, req.responseText);
+						return;
+					}
+					u = JSON.parse(req.responseText);
+					users[i] = u;
+					cb(u);
+				};
+				req.open("GET", "https://ripple.moe/api/v1/users?id=" + i);
+				req.send();
+			};
+
+			var modes = [
+				"osu! standard",
+				"Taiko",
+				"Catch the Beat",
+				"osu!mania",
+			];
+
+			// makes the number of 2 digits (0-pads if it has only one digit)
+			function digits(i) {
+				return i.toString().length == 1 ? "0" + i.toString() : i.toString();
+			} 
+
+			// messageHandlers specifies the handlers for the various types of messages from the Ripple API.
+			var messageHandlers = {
+				connected: function() {
+					setStatusMessage("Connected, subscribing to scores");
+					ws.send(JSON.stringify({
+						type: "subscribe_scores",
+						data: [],
+					}));
+				},
+				subscribed_to_scores: function() {
+					hideStatusMessage();
+				},
+				new_score: function(score) {
+					if (score === null)
+						return;
+					getUser(score.user_id, function(user) {
+						var cloned = templateBox.cloneNode(true);
+						cloned.attributes.removeNamedItem("id");
+						cloned.attributes.getNamedItem("class").value = "box";
+
+						// set the image to be the user's avatar
+						var link = cloned.children[0].children[0].children[0];
+						link.setAttribute("href", "https://ripple.moe/u/" + score.user_id);
+						link.children[0].children[0].setAttribute("src", "https://a.ripple.moe/" + score.user_id);
+						// get the score paragraph
+						var scoreParagraph = cloned.children[0].children[1].children[0].children[0];
+						var scoreTime = new Date(score.time);
+						scoreParagraph.innerHTML = "<b class='username'>" + user.username + "</b><br>";
+						scoreParagraph.innerHTML +=
+							"At " + scoreTime.getHours() + ":" + digits(scoreTime.getMinutes()) + ":" + digits(scoreTime.getSeconds()) + " " +
+							user.username + " submitted a score with " + (score.pp ? score.pp + " pp" : score.score + " points") + ", on " + modes[score.play_mode] + ".<br>" +
+							"It is " + (score.full_combo ? "" : "not") + " a full combo, and the accuracy is " + score.accuracy.toFixed(2) + "%.";
+						scoreContainer.insertBefore(cloned, scoreContainer.firstChild);
+					});
+				},
+			};
+
+			setStatusMessage("Opening websocket connection...");
+
+			// open the ws connection			
+			var ws = new WebSocket("wss://api.ripple.moe/api/v1/ws");
+			ws.addEventListener("message", function(msg) {
+				var data = JSON.parse(msg.data);
+				console.log(data);
+				// delegate the handling of the actual message data to the messageHandlers
+				var handler = messageHandlers[data.type];
+				if (typeof handler !== "undefined")
+					handler((typeof data.data === "undefined" ? null : data.data));
+			});
+			ws.addEventListener("close", function(e) {
+				setStatusMessage("Connection to websocket was closed with code " + e.code + "; reason: " + e.reason);
+			});
+			ws.addEventListener("error", function(e) {
+				setStatusMessage("An error has occurred. It can be seen in the JavaScript console (Ctrl+Shift+I)");
+				console.error(e);
+			});
+		</script>
+	</body>
+</html>
