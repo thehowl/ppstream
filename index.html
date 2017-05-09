@@ -3,6 +3,7 @@
 	<head>
 		<title>ppstream</title>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.4.1/css/bulma.min.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<style>
 			.username {
 				font-size: 1.7rem;
@@ -79,7 +80,7 @@
 				var u = users[i];
 				if (typeof u !== "undefined")
 					cb(u);
-				
+
 				var req = new XMLHttpRequest();
 				req.onreadystatechange = function() {
 					if (req.readyState !== XMLHttpRequest.DONE)
@@ -106,7 +107,7 @@
 			// makes the number of 2 digits (0-pads if it has only one digit)
 			function digits(i) {
 				return i.toString().length == 1 ? "0" + i.toString() : i.toString();
-			} 
+			}
 
 			// messageHandlers specifies the handlers for the various types of messages from the Ripple API.
 			var messageHandlers = {
@@ -147,7 +148,7 @@
 
 			setStatusMessage("Opening websocket connection...");
 
-			// open the ws connection			
+			// open the ws connection
 			var ws = new WebSocket("wss://api.ripple.moe/api/v1/ws");
 			ws.addEventListener("message", function(msg) {
 				var data = JSON.parse(msg.data);
