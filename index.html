@@ -117,6 +117,9 @@
 						type: "subscribe_scores",
 						data: [],
 					}));
+					setInterval(function() {
+						ws.send(JSON.toString({type: "ping"}));
+					});
 				},
 				subscribed_to_scores: function() {
 					hideStatusMessage();
