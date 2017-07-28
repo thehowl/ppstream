@@ -119,7 +119,7 @@
 					}));
 					setInterval(function() {
 						ws.send(JSON.toString({type: "ping"}));
-					});
+					}, 60000);
 				},
 				subscribed_to_scores: function() {
 					hideStatusMessage();
