@@ -118,7 +118,7 @@
 						data: [],
 					}));
 					setInterval(function() {
-						ws.send(JSON.strigify({type: "ping"}));
+						ws.send(JSON.stringify({type: "ping"}));
 					}, 60000);
 				},
 				subscribed_to_scores: function() {
