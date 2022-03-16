@@ -78,8 +78,10 @@
 			var users = {};
 			function getUser(i, cb) {
 				var u = users[i];
-				if (typeof u !== "undefined")
+				if (typeof u !== "undefined") {
 					cb(u);
+					return
+				}
 
 				var req = new XMLHttpRequest();
 				req.onreadystatechange = function() {
